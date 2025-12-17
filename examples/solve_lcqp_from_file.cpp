@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <chrono>
+#include "MessageHandler.hpp"
 
 bool PathExists(const std::string &s)
 {
@@ -150,12 +151,23 @@ int main() {
 
     // Run the solver
     retVal = lcqp.runSolver();
+    LCQPow::MessageHandler::PrintMessage( retVal, LCQPow::MESSAGE );
 
     if (retVal != LCQPow::SUCCESSFUL_RETURN)
     {
         printf("Failed to solve LCQP.\n");
-        return 1;
+        // return 1;
     }
+
+    
+    double* xOpt = new double[nV];
+    lcqp.getPrimalSolution(xOpt);
+    std::cout << "[";
+    for (int i = 0; i < nV; i++) {
+        if (i > 0) std::cout << ", ";
+        std::cout << xOpt[i];
+    }
+    std::cout << "]" << std::endl;
 
     return 0;
 }
