@@ -60,6 +60,14 @@ Then run a scipt, for exampe:
 docker run --rm -it lcqpow:latest ./build/bin/examples/warm_up
 ```
 
+Example usage:
+```bash
+docker run --rm -it \
+  -v "$PWD/examples/example_data":/workspace/examples/example_data \
+  lcqpow:latest \
+  ./build/bin/examples/solve_lcqp_from_file examples/example_data
+```
+
 ## MATLAB Interface
 The **MATLAB interface** is built automatically if matlab is successfully detected by CMake. Make sure that your **linker can locate the created libraries**, e.g. by exporting the library path in **the same shell as the one you call matlab in**:
 ```
