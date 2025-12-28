@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <chrono>
+#include <nlohmann/json.hpp>
 
 bool PathExists(const std::string &s)
 {
@@ -159,6 +160,30 @@ int main(int argc, char* argv[]) {
         printf("Failed to solve LCQP.\n");
         return 1;
     }
+    
+    // Get solutions
+    std::vector<double> xOpt(nV);
+    LCQPow::OutputStatistics stats;
+	lcqp.getPrimalSolution( xOpt.data() );
+    lcqp.getOutputStatistics( stats );
+
+    // Save solution to file
+    nlohmann::json solution_json;
+
+    std::string sol_filename = inputdir + "/solution.json";
+    std::ofstream out(sol_filename);
+
+    solution_json["iter_total"] = stats.getIterTotal();
+    solution_json["iter_outer"] = stats.getIterOuter();
+    solution_json["rho_opt"] = stats.getRhoOpt();
+    solution_json["subproblem_iter"] = stats.getSubproblemIter();
+    solution_json["x_opt"] = xOpt;
+
+    // write to file
+    out << solution_json.dump(2) << "\n";
+
+    // (optional) also print
+    std::cout << solution_json.dump(2) << "\n";
 
     return 0;
 }
