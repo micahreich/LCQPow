@@ -33,11 +33,14 @@ bool PathExists(const std::string &s)
     return (stat (s.c_str(), &buffer) == 0);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <folder_path>\n";
+        return 1;
+    }
 
-    std::cout << "Preparing OCP loaded from file...\n";
-
-    std::string inputdir = "examples/example_data";
+    std::cout << "Preparing OCP loaded from file: " << argv[1] << std::endl;
+    std::string inputdir = argv[1];
 
     if (!PathExists(inputdir)) {
         printf("Input directory does not exist.");
