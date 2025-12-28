@@ -48,6 +48,18 @@ QPOASES_SCHUR       ON  / [OFF]
 
 4. Even more examples, in particular variations of the options, can be found in `<LCQPow-dir>/test/examples` directory. Those are not included in the examples directory in order to keep the example set neatly arranged.
 
+## Docker Container
+
+To run executables inside a Linux Docker container, first build the container:
+```bash
+docker build -t lcqpow:latest .
+```
+
+Then run a scipt, for exampe:
+```bash
+docker run --rm -it lcqpow:latest ./build/bin/examples/warm_up
+```
+
 ## MATLAB Interface
 The **MATLAB interface** is built automatically if matlab is successfully detected by CMake. Make sure that your **linker can locate the created libraries**, e.g. by exporting the library path in **the same shell as the one you call matlab in**:
 ```
