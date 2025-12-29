@@ -183,8 +183,8 @@ int main(int argc, char* argv[]) {
     // write to file
     out << solution_json.dump(2) << "\n";
 
-    // (optional) also print
-    std::cout << solution_json.dump(2) << "\n";
+    // // (optional) also print
+    // std::cout << solution_json.dump(2) << "\n";
 
     
     double* xOpt = new double[nV];
