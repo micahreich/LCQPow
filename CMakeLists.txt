@@ -70,13 +70,13 @@ option(
 option(
     BUILD_MATLAB_INTERFACE
     "Option to build Matlab interface"
-    ON
+    OFF
 )
 
 option(
     BUILD_PYTHON_INTERFACE
     "Option to build Python interface"
-    ON
+    OFF
 )
 
 # print options
