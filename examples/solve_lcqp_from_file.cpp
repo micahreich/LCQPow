@@ -184,6 +184,7 @@ int main(int argc, char* argv[]) {
     solution_json["status_string"] = LCQPow::MessageHandler::SolutionString(stats.getSolutionStatus());
     solution_json["status"] = stats.getSolutionStatus();
     solution_json["message"] = LCQPow::MessageHandler::MessageString(retVal);
+    solution_json["iters"] = lcqp.iters;
 
 
     // write to file
