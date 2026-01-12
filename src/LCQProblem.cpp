@@ -466,6 +466,8 @@ namespace LCQPow {
 			}
 		}
 
+        iters = std::vector<std::vector<double>>();
+
 		// Initialize Qk = Q + rhok*C
 		setQk();
 
@@ -477,6 +479,9 @@ namespace LCQPow {
 
 			// Update xk, Qk, stationarity
 			updateStep( );
+
+            // TODO: store solution
+            // iters.push_back(std::vector<double>(xk, xk + nV));
 
 			// Update gradient of Lagrangian
 			updateStationarity( );

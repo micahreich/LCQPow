@@ -530,6 +530,9 @@ namespace LCQPow {
 			Subsolver subsolver;					/**< Subsolver class for solving the QP subproblems. */
 
 			OutputStatistics stats;					/**< Output statistics. */
+
+    public:
+            std::vector<std::vector<double>> iters; /**< Storage for iterates. */
 	};
 }
 
