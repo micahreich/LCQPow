@@ -210,6 +210,169 @@ namespace LCQPow {
         return ret;
     }
 
+     std::string MessageHandler::MessageString( ReturnValue ret ) {
+        switch (ret) {
+            case NOT_YET_IMPLEMENTED:
+                return "This method has not yet been implemented.\n";
+                break;
+
+            case LCQPOBJECT_NOT_SETUP:
+                return "The LCQP object has not been set up correctly.\n";
+                break;
+
+            case INDEX_OUT_OF_BOUNDS:
+                return "Index out of bounds.\n";
+                break;
+
+            case SUBPROBLEM_SOLVER_ERROR:
+                return "The subproblem solver produced an error.\n";
+                break;
+
+            case UNABLE_TO_READ_FILE:
+                return "Unable to read file.\n";
+                break;
+
+            case MAX_ITERATIONS_REACHED:
+                return "Maximum number of iterations reached.\n";
+                break;
+
+            case MAX_PENALTY_REACHED:
+                return "Maxium penalty value reached.\n";
+                break;
+
+            case INITIAL_SUBPROBLEM_FAILED:
+                return "Failed to solve initial QP.\n";
+                break;
+
+            case INVALID_ARGUMENT:
+                return "Invalid argument passed.\n";
+                break;
+
+            case INVALID_NUMBER_OF_OPTIM_VARS:
+                return "Invalid optimization variable dimension passed (required to be > 0).\n";
+                break;
+
+            case INVALID_NUMBER_OF_COMP_VARS:
+                return "Invalid complementarity dimension passed (required to be > 0).\n";
+                break;
+
+            case INVALID_NUMBER_OF_CONSTRAINT_VARS:
+                return "Invalid number of optimization variables passed (required to be >= 0).\n";
+                break;
+
+            case INVALID_QPSOLVER:
+                return "Invalid QPSolver passed.\n";
+                break;
+
+            case INVALID_COMPLEMENTARITY_TOLERANCE:
+                return "Ignoring invalid complementarity tolerance.\n";
+                break;
+
+            case INVALID_INITIAL_PENALTY_VALUE:
+                return "Invalid argument passed (initial penalty value).\n";
+                break;
+
+            case INVALID_PENALTY_UPDATE_VALUE:
+                return "Ignoring invalid penalty update value.\n";
+                break;
+
+            case INVALID_MAX_ITERATIONS_VALUE:
+                return "Ignoring invalid number of maximum iterations.\n";
+                break;
+
+            case INVALID_MAX_RHO_VALUE:
+                return "Ignoring invalid number of maximum penalty value.\n";
+                break;
+
+            case DENSE_SPARSE_MISSMATCH:
+                return "The solver was initialized with dense (sparse) matrices but a sparse (dense) method was chosen.\n";
+                break;
+
+            case INVALID_STATIONARITY_TOLERANCE:
+                return "Ignoring invalid stationarity tolerance.\n";
+                break;
+
+            case INVALID_INDEX_POINTER:
+                return "Invalid index pointer passed in csc format.\n";
+                break;
+
+            case INVALID_INDEX_ARRAY:
+                return "Invalid index array passed in csc format.\n";
+                break;
+
+            case INVALID_OSQP_BOX_CONSTRAINTS:
+                return "Invalid constraints passed to OSQP solver: This solver does not handle box constraints, please pass them through linear constraints.\n";
+                break;
+
+            case INVALID_TOTAL_ITER_COUNT:
+                return "Invalid total number of iterations delta passed to output statistics (must be non-negative integer).\n";
+                break;
+
+            case INVALID_TOTAL_OUTER_ITER:
+                return "Invalid total number of outer iterations delta passed to output statistics (must be non-negative integer).\n";
+                break;
+
+            case IVALID_SUBPROBLEM_ITER:
+                return "Invalid total number of subproblem solver iterates delta passed to output statistics (must be non-negative integer).\n";
+                break;
+
+            case INVALID_RHO_OPT:
+                return "Invalid rho value at solution passed to output statistics (must be positive double).\n";
+                break;
+
+            case INVALID_PRINT_LEVEL_VALUE:
+                return "Ignoring invalid integer to be parsed to print level passed (must be in range of enum).\n";
+                break;
+
+            case INVALID_OBJECTIVE_LINEAR_TERM:
+                return "Invalid objective linear term passed (must be a double array of length n).\n";
+                break;
+
+            case INVALID_CONSTRAINT_MATRIX:
+                return "Invalid constraint matrix passed (matrix was null pointer but number of constraints is positive).\n";
+                break;
+
+            case INVALID_COMPLEMENTARITY_MATRIX:
+                return "Invalid complementarity matrix passed (can not be null pointer).\n";
+                break;
+
+            case INVALID_ETA_VALUE:
+                return "Invalid etaDynamicPenalty value, which describes the fraction of loss required for complementarity progress (must be in (0,1)).";
+                break;
+
+            case OSQP_INITIAL_PRIMAL_GUESS_FAILED:
+                return "OSQP failed to use the primal initial guess.\n";
+                break;
+
+            case OSQP_INITIAL_DUAL_GUESS_FAILED:
+                return "OSQP failed to use the dual initial guess.\n";
+                break;
+
+            case INVALID_LOWER_COMPLEMENTARITY_BOUND:
+                return "Lower complementarity bound must be bounded below.\n";
+                break;
+
+            case FAILED_SYM_COMPLEMENTARITY_MATRIX:
+                return "Failed to compute the symmetric complementarity matrix C.\n";
+                break;
+
+            case FAILED_SWITCH_TO_SPARSE:
+                return "Failed to switch to sparse mode (a to be created sparse matrix was nullpointer).\n";
+                break;
+
+            case FAILED_SWITCH_TO_DENSE:
+                return "Failed to switch to dense mode (an array to be created was nullpointer).\n";
+                break;
+
+            case OSQP_WORKSPACE_NOT_SET_UP:
+                return "OSQP Workspace is not set up (please check for OSQP errors).\n";
+                break;
+                
+            default:
+                return "Unrecognized message type";
+        }
+    }
+
 
     AlgorithmStatus MessageHandler::PrintSolution( AlgorithmStatus algoStat ) {
 
@@ -242,6 +405,31 @@ namespace LCQPow {
             printf("#################################\n\n");
 
         return algoStat;
+    }
+
+    std::string MessageHandler::SolutionString( AlgorithmStatus algoStat ) {
+
+        switch (algoStat) {
+            case W_STATIONARY_SOLUTION:
+                return "W-Stationary solution found ##\n";
+                break;
+
+            case C_STATIONARY_SOLUTION:
+                return "C-Stationary solution found ##\n";
+                break;
+
+            case M_STATIONARY_SOLUTION:
+                return "M-Stationary solution found ##\n";
+                break;
+
+            case S_STATIONARY_SOLUTION:
+                return "S-Stationary solution found ##\n";
+                break;
+
+            default:
+                return "The LCQP has not been solved.\n";
+                break;
+        }
     }
 }
 

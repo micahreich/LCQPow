@@ -27,6 +27,7 @@
 #include <sys/stat.h>
 #include <chrono>
 #include <nlohmann/json.hpp>
+#include "MessageHandler.hpp"
 
 bool PathExists(const std::string &s)
 {
@@ -179,22 +180,17 @@ int main(int argc, char* argv[]) {
     solution_json["rho_opt"] = stats.getRhoOpt();
     solution_json["subproblem_iter"] = stats.getSubproblemIter();
     solution_json["x_opt"] = xOpt;
+    solution_json["qp_solver"] = "QPOASES";
+    solution_json["status_string"] = LCQPow::MessageHandler::SolutionString(stats.getSolutionStatus());
+    solution_json["status"] = stats.getSolutionStatus();
+    solution_json["message"] = LCQPow::MessageHandler::MessageString(retVal);
+
 
     // write to file
     out << solution_json.dump(2) << "\n";
 
     // // (optional) also print
     // std::cout << solution_json.dump(2) << "\n";
-
-    
-    double* xOpt = new double[nV];
-    lcqp.getPrimalSolution(xOpt);
-    std::cout << "[";
-    for (int i = 0; i < nV; i++) {
-        if (i > 0) std::cout << ", ";
-        std::cout << xOpt[i];
-    }
-    std::cout << "]" << std::endl;
 
     return 0;
 }

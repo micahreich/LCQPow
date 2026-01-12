@@ -24,6 +24,7 @@
 #define LCQPOW_MESSAGEHANDLER_HPP
 
 #include "Utilities.hpp"
+#include <string>
 
 namespace LCQPow {
 
@@ -38,6 +39,13 @@ namespace LCQPow {
              * @returns Simply passes the return value that was given. */
             static ReturnValue PrintMessage( ReturnValue ret, MessageType type = MESSAGE );
 
+            /** Return a message string
+             *
+             * @param ret A return value which will impact the print message.
+             * @param type The message type (will determine the message pre-print).
+             *
+             * @returns Simply passes the return value that was given. */
+            static std::string MessageString( ReturnValue ret );
 
             /** Print a solution status.
              *
@@ -45,6 +53,13 @@ namespace LCQPow {
              *
              * @returns Simply passes the algorithm status that was given. */
             static AlgorithmStatus PrintSolution( AlgorithmStatus algoStat );
+
+            /** Returns solution status as string.
+             *
+             * @param algoStat The status to be printed.
+             *
+             * @returns the solution status as a string */
+            static std::string SolutionString( AlgorithmStatus algoStat );
 
     };
 }
