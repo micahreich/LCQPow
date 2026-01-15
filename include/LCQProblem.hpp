@@ -532,7 +532,9 @@ namespace LCQPow {
 			OutputStatistics stats;					/**< Output statistics. */
 
     public:
-            std::vector<std::vector<double>> iters; /**< Storage for iterates. */
+            std::vector<std::vector<double>> iters_x; /**< Storage for solution iterates. */
+            std::vector<double> iters_rho;           /**< Storage for penalty iterates. */
+            std::vector<double> iters_alpha;         /**< Storage for step length iterates. */
 	};
 }
 

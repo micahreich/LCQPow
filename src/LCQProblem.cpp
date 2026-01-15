@@ -466,7 +466,9 @@ namespace LCQPow {
 			}
 		}
 
-        iters = std::vector<std::vector<double>>();
+        iters_x = std::vector<std::vector<double>>();
+        iters_rho = std::vector<double>();
+        iters_alpha = std::vector<double>();
 
 		// Initialize Qk = Q + rhok*C
 		setQk();
@@ -479,9 +481,6 @@ namespace LCQPow {
 
 			// Update xk, Qk, stationarity
 			updateStep( );
-
-            // TODO: store solution
-            // iters.push_back(std::vector<double>(xk, xk + nV));
 
 			// Update gradient of Lagrangian
 			updateStationarity( );
@@ -561,6 +560,11 @@ namespace LCQPow {
 
 			// Step length computation
 			getOptimalStepLength( );
+
+            // TODO: record current iterate
+            iters_x.push_back(std::vector<double>(xk, xk + nV));
+            iters_rho.push_back(rho);
+            iters_alpha.push_back(alphak);
 		}
 	}
 

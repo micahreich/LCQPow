@@ -306,7 +306,7 @@ namespace LCQPow {
         maxIterations = 1000;
         maxPenaltyParameter = 1e8;
 
-        nDynamicPenalty = 3;
+        nDynamicPenalty = 10;
         etaDynamicPenalty = 0.9;
 
         printLevel = PrintLevel::INNER_LOOP_ITERATES;
