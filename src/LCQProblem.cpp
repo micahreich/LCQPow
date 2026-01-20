@@ -562,9 +562,9 @@ namespace LCQPow {
 			getOptimalStepLength( );
 
             // TODO: record current iterate
-            iters_x.push_back(std::vector<double>(xk, xk + nV));
-            iters_rho.push_back(rho);
-            iters_alpha.push_back(alphak);
+            // iters_x.push_back(std::vector<double>(xk, xk + nV));
+            // iters_rho.push_back(rho);
+            // iters_alpha.push_back(alphak);
 		}
 	}
 
