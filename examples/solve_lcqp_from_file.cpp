@@ -28,6 +28,7 @@
 #include <chrono>
 #include <nlohmann/json.hpp>
 #include "MessageHandler.hpp"
+#include <chrono>
 
 bool PathExists(const std::string &s)
 {
@@ -154,7 +155,13 @@ int main(int argc, char* argv[]) {
     }
 
     // Run the solver
+    auto t0 = std::chrono::steady_clock::now();
+
     retVal = lcqp.runSolver();
+
+    auto t1 = std::chrono::steady_clock::now();
+    auto dt = std::chrono::duration<double>(t1 - t0).count();
+
     LCQPow::MessageHandler::PrintMessage( retVal, LCQPow::MESSAGE );
 
     if (retVal != LCQPow::SUCCESSFUL_RETURN)
@@ -187,6 +194,7 @@ int main(int argc, char* argv[]) {
     solution_json["iters_x"] = lcqp.iters_x;
     solution_json["iters_rho"] = lcqp.iters_rho;
     solution_json["iters_alpha"] = lcqp.iters_alpha;
+    solution_json["runtime_s"] = dt;
 
     // write to file
     out << solution_json.dump(2) << "\n";
