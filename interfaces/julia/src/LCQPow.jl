@@ -171,6 +171,4 @@ function solve_qpcc_with_lcqpow(data::NamedTuple; x0=nothing, print_level::Integ
     )
 end
 
-export solve_qpcc_with_lcqpow
-
 end # module

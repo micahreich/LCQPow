@@ -20,7 +20,7 @@ data = (
 # Pick the QP subsolver via `qp_solver`:
 #   LCQPow.QPOASES_DENSE   (default), LCQPow.QPOASES_SPARSE, LCQPow.OSQP_SPARSE
 for (name, backend) in (("qpOASES", LCQPow.QPOASES_DENSE), ("OSQP", LCQPow.OSQP_SPARSE))
-    result = solve_qpcc_with_lcqpow(data;
+    result = LCQPow.solve_qpcc_with_lcqpow(data;
         qp_solver = backend,
         stationarity_tolerance = 1e-8,
         complementarity_tolerance = 1e-8,
