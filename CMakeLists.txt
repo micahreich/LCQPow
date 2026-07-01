@@ -79,12 +79,19 @@ option(
     OFF
 )
 
+option(
+    BUILD_JULIA_INTERFACE
+    "Option to build Julia (CxxWrap) interface"
+    OFF
+)
+
 # print options
 message(
     "CMAKE_BUILD_TYPE           ${CMAKE_BUILD_TYPE}\n"
     "EXAMPLES                   ${BUILD_EXAMPLES}\n"
     "BUILD_MATLAB_INTERFACE     ${BUILD_MATLAB_INTERFACE}\n"
     "BUILD_PYTHON_INTERFACE     ${BUILD_PYTHON_INTERFACE}\n"
+    "BUILD_JULIA_INTERFACE      ${BUILD_JULIA_INTERFACE}\n"
     "UNIT_TESTS                 ${UNIT_TESTS}\n"
     "PROFILING                  ${PROFILING}\n"
     "QPOASES_SCHUR              ${QPOASES_SCHUR}\n"
@@ -205,7 +212,7 @@ ExternalProject_Add(
     BUILD_IN_SOURCE ON
     BUILD_COMMAND make ${qpOASES_MAKE_ARGS} src;
     INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
-    INSTALL_COMMAND cp ${CMAKE_BINARY_DIR}/external/src/qpoases/bin/libqpOASES.so ${CMAKE_INSTALL_PREFIX}/lib/libqpOASES.so
+    INSTALL_COMMAND cp ${CMAKE_BINARY_DIR}/external/src/qpoases/bin/libqpOASES.so ${CMAKE_INSTALL_PREFIX}/lib/libqpOASES${CMAKE_SHARED_LIBRARY_SUFFIX}
 )
 
 set(qpoases_lib "-L${CMAKE_BINARY_DIR}/lib -lqpOASES")
@@ -219,8 +226,9 @@ ExternalProject_Add(
     CMAKE_ARGS
         -DDLONG=OFF
         -DBUILD_SHARED_LIBS=ON
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
     BUILD_COMMAND cmake --build .
-    INSTALL_COMMAND cp ${CMAKE_BINARY_DIR}/external/src/osqp-build/out/libosqp.so ${CMAKE_INSTALL_PREFIX}/lib/libosqp.so
+    INSTALL_COMMAND cp ${CMAKE_BINARY_DIR}/external/src/osqp-build/out/libosqp${CMAKE_SHARED_LIBRARY_SUFFIX} ${CMAKE_INSTALL_PREFIX}/lib/libosqp${CMAKE_SHARED_LIBRARY_SUFFIX}
 )
 
 set(osqp_lib "-L${CMAKE_BINARY_DIR}/lib -losqp")
@@ -301,6 +309,16 @@ add_dependencies(
     qpoases
     osqp
 )
+
+# On macOS a shared library must resolve all of its symbols at link time (Linux
+# defers this to load time), so the shared LCQPow library has to link qpOASES
+# and OSQP directly.
+if (APPLE)
+    target_link_libraries(
+        ${PROJECT_NAME}-shared
+        PRIVATE ${qpoases_lib} ${osqp_lib}
+    )
+endif()
 
 if (${QPOASES_SCHUR})
     target_link_libraries(
@@ -481,6 +499,55 @@ if (${BUILD_PYTHON_INTERFACE})
         DESTINATION ${PYTHON_INTERFACE_DESTINATION}
     )
     
+endif()
+
+## Build Julia interface ----------------------------------------------------------------
+if (${BUILD_JULIA_INTERFACE})
+
+    # Auto-detect JlCxx (shipped with the CxxWrap.jl package) from the local
+    # Julia install unless the caller already provided JlCxx_DIR.
+    if (NOT DEFINED JlCxx_DIR)
+        find_program(JULIA_EXECUTABLE julia)
+        if (JULIA_EXECUTABLE)
+            execute_process(
+                COMMAND ${JULIA_EXECUTABLE} --startup-file=no -e "using CxxWrap; print(CxxWrap.prefix_path())"
+                OUTPUT_VARIABLE _jlcxx_prefix
+                ERROR_QUIET
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+            if (_jlcxx_prefix)
+                set(JlCxx_DIR "${_jlcxx_prefix}/lib/cmake/JlCxx"
+                    CACHE PATH "Path to JlCxxConfig.cmake auto-detected from Julia")
+                message(STATUS "Auto-detected JlCxx_DIR: ${JlCxx_DIR}")
+            else()
+                message(WARNING "Could not detect JlCxx from Julia. Install CxxWrap.jl or set JlCxx_DIR to build the Julia interface.")
+            endif()
+        endif()
+    endif()
+
+    find_package(JlCxx QUIET)
+    if (JlCxx_FOUND)
+        add_library(lcqpow_julia SHARED interfaces/julia/lcqpow_julia_bindings.cpp)
+
+        add_dependencies(lcqpow_julia qpoases osqp)
+
+        target_include_directories(lcqpow_julia
+            PRIVATE include
+            SYSTEM ${qpoases_include}
+            SYSTEM ${osqp_include}
+        )
+
+        target_link_libraries(lcqpow_julia
+            PUBLIC ${PROJECT_NAME}-shared
+            PRIVATE ${qpoases_lib} ${osqp_lib} JlCxx::cxxwrap_julia
+        )
+
+        set_target_properties(lcqpow_julia PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+        )
+    else()
+        message(WARNING "JlCxx not found; skipping LCQPow Julia CxxWrap bindings.")
+    endif()
 endif()
 
 ## Build unit tests ---------------------------------------------------------------------
