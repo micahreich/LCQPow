@@ -102,6 +102,21 @@ solve_qpcc_with_lcqpow(data; qp_solver = LCQPow.OSQP_SPARSE)     # OSQP
 A sparse `qp_solver` (`QPOASES_SPARSE` or `OSQP_SPARSE`) automatically switches
 the loaded problem to sparse mode.
 
+### Nonzero complementarity constants
+
+LCQPow can be unreliable when the complementarity constants `l`, `r` are nonzero
+(they become nonzero `lbL`/`lbR` bounds). Pass `use_dummy_constant = true` to
+apply the standard workaround — append a variable pinned to `1`, fold `l`, `r`
+into an extra column of `L`, `R`, and use `lbL = lbR = 0`:
+
+```julia
+solve_qpcc_with_lcqpow(data; use_dummy_constant = true)
+```
+
+The trick only kicks in when `l` or `r` is actually nonzero (otherwise it's a
+no-op), the dummy variable is dropped from the returned `x`, and it works with
+every subsolver (it pins the dummy via a linear equality, not a box bound).
+
 ### Options
 
 Other solver hyperparameters are keyword arguments (see `LCQPow.OPTION_NAMES`),

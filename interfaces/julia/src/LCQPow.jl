@@ -47,28 +47,6 @@ const OPTION_NAMES = (
 
 const OPTION_INDEX = Dict(name => i for (i, name) in pairs(OPTION_NAMES))
 
-# Input marshaling helpers.
-_mat(M, rows, cols, name) = begin
-    A = Matrix{Float64}(M)
-    size(A) == (rows, cols) || throw(ArgumentError("$name must have size ($rows, $cols), got $(size(A))"))
-    A
-end
-
-_vec(v, len, name) = begin
-    x = Vector{Float64}(v)
-    length(x) == len || throw(ArgumentError("$name must have length $len, got $(length(x))"))
-    x
-end
-
-# Marble constraint block with any number of rows (a zero-row block means "no
-# such constraints"); the matrix must have `cols` columns.
-_block_mat(M, cols, name) = begin
-    A = Matrix{Float64}(M)
-    size(A, 1) == 0 && return Matrix{Float64}(undef, 0, cols)
-    size(A, 2) == cols || throw(ArgumentError("$name must have $cols columns, got size $(size(A))"))
-    A
-end
-
 # LCQPow's status/message strings are formatted for console printing (stray '#'
 # and trailing newlines); tidy them up for programmatic use.
 _clean(s) = strip(replace(String(s), '#' => "", '\n' => ' '))
@@ -84,7 +62,7 @@ function _option_values(kwargs)
 end
 
 """
-    solve_qpcc_with_lcqpow(data::NamedTuple; x0=nothing, print_level=PRINT_NONE, kwargs...) -> NamedTuple
+    solve_qpcc_with_lcqpow(data::NamedTuple; x0=nothing, print_level=PRINT_NONE, use_dummy_constant=false, kwargs...) -> NamedTuple
 
 Solve Marble-form QPCC data (the CRISP formulation) with LCQPow:
 
@@ -106,50 +84,84 @@ constraint types you don't have. This maps onto LCQPow's native form as:
 hyperparameters are forwarded as keyword arguments (see `OPTION_NAMES`), e.g.
 `stationarity_tolerance`, `max_iterations`.
 
+LCQPow can be unreliable when the complementarity constants `l`, `r` are nonzero
+(they become nonzero `lbL`/`lbR` lower bounds). Set `use_dummy_constant = true`
+to work around this: when `l` or `r` is nonzero it appends a variable pinned to
+`1` (via a linear equality, so all subsolvers work), folds `l`, `r` into an extra
+column of `L`, `R`, and uses `lbL = lbR = 0`. The extra variable is dropped from
+the returned `x`.
+
 Returns a NamedTuple:
 
     (; converged, x, y, objective, iterations, outer_iterations,
        subproblem_iterations, rho, status, message, return_value,
        solve_time_seconds)
 """
-function solve_qpcc_with_lcqpow(data::NamedTuple; x0=nothing, print_level::Integer=PRINT_NONE, kwargs...)
-    q = Vector{Float64}(data.q)
+function solve_qpcc_with_lcqpow(data::NamedTuple;
+                                x0=nothing,
+                                print_level::Integer=PRINT_NONE,
+                                use_dummy_constant::Bool=false,
+                                kwargs...)
+    q = data.q
     n = length(q)
-    Qm = _mat(data.Q, n, n, "Q")
-    c0 = Float64(data.c0)
+    Qm = data.Q
+    c0 = data.c0
 
     # Stack equalities then inequalities into LCQPow's two-sided linear block:
     #   J_eq x + b_eq == 0       ->  lbA = ubA = -b_eq
     #   J_ineq x + b_ineq >= 0   ->  lbA = -b_ineq,  ubA = +∞
     # Zero-row blocks collapse to empty arrays, which LCQPow reads as "no rows".
-    J_eq   = _block_mat(data.J_eq, n, "J_eq")
-    b_eq   = _vec(data.b_eq, size(J_eq, 1), "b_eq")
-    J_ineq = _block_mat(data.J_ineq, n, "J_ineq")
-    b_ineq = _vec(data.b_ineq, size(J_ineq, 1), "b_ineq")
+    J_eq   = data.J_eq
+    b_eq   = data.b_eq
+    J_ineq = data.J_ineq
+    b_ineq = data.b_ineq
     A   = vcat(J_eq, J_ineq)
     lbA = vcat(-b_eq, -b_ineq)
     ubA = vcat(-b_eq, fill(INFTY, length(b_ineq)))
 
-    # Complementarity: 0 <= Lx + l  ⊥  Rx + r >= 0   ==>   lbL = -l, lbR = -r.
-    Lm = _mat(data.L, size(data.L, 1), n, "L")
+    Lm = data.L
     nComp = size(Lm, 1)
-    Rm = _mat(data.R, nComp, n, "R")
-    lbL = -_vec(data.l, nComp, "l")
-    lbR = -_vec(data.r, nComp, "r")
+    Rm = data.R
+    l = data.l
+    r = data.r
+    x0v = isnothing(x0) ? Float64[] : Vector{Float64}(x0)
 
-    x0v = isnothing(x0) ? Float64[] : _vec(x0, n, "x0")
+    # Complementarity `0 <= Lx + l  ⊥  Rx + r >= 0` maps to `lbL = -l, lbR = -r`.
+    # LCQPow can be unreliable with nonzero complementarity bounds, so when
+    # `use_dummy_constant` is set and l/r are not all zero, append a variable
+    # pinned to 1 and fold l, r into an extra column of L, R, leaving lbL = lbR
+    # = 0. The dummy is pinned with a linear equality row (rather than a box
+    # bound, which OSQP rejects). It stays out of the objective and is dropped
+    # from the returned solution.
+    if use_dummy_constant && (any(!iszero, l) || any(!iszero, r))
+        Qs   = [Qm zeros(n); zeros(1, n + 1)]
+        gs   = vcat(q, 0.0)
+        Ls   = hcat(Lm, l)
+        Rs   = hcat(Rm, r)
+        lbLs, lbRs = zeros(nComp), zeros(nComp)
+        pin  = reshape(vcat(zeros(n), 1.0), 1, n + 1)   # e_dummy' x == 1
+        As   = size(A, 1) == 0 ? pin : vcat(hcat(A, zeros(size(A, 1))), pin)
+        lbAs = vcat(lbA, 1.0)
+        ubAs = vcat(ubA, 1.0)
+        x0s  = isempty(x0v) ? Float64[] : vcat(x0v, 1.0)
+    else
+        Qs, gs, Ls, Rs, As = Qm, q, Lm, Rm, A
+        lbAs, ubAs = lbA, ubA
+        lbLs, lbRs = -l, -r
+        x0s = x0v
+    end
+
     options = _option_values((; print_level=print_level, kwargs...))
 
-    # Marble form has no complementarity upper bounds, box bounds, or dual warm
-    # start, so those slots are always empty.
-    res = _solve_qpcc_with_lcqpow(Qm, q, Lm, Rm,
-                                  lbL, Float64[], lbR, Float64[],
-                                  A, lbA, ubA,
+    res = _solve_qpcc_with_lcqpow(Qs, gs, Ls, Rs,
+                                  lbLs, Float64[], lbRs, Float64[],
+                                  As, lbAs, ubAs,
                                   Float64[], Float64[],
-                                  x0v, Float64[],
+                                  x0s, Float64[],
                                   options)
 
-    x = Vector{Float64}(primal_solution(res))
+    # Drop the dummy variable (if any) and score with the original objective.
+    x = Vector{Float64}(primal_solution(res))[1:n]
     objective = 0.5 * dot(x, Qm * x) + dot(q, x) + c0
 
     # LCQPow has no message string for a successful return; supply a sensible one.
