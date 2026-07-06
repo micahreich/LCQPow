@@ -1,120 +1,91 @@
-﻿#	LCQPow - A Solver for Quadratic Programs with Linear Complementarity Constraints
+# LCQPow
 
-LCQPow is a open-source solver for Quadratic Programs with Complementarity Constraints. The approach is based on a standard penalty homotopy reformulated using sequential convex programming. The convex sequence derives from linearizing the (necessarily) nonconvex penalty function. This leads to a constant objective Hessian matrix throughout all iterates, and thus enables us to solve the linear complementarity quadratic program with a single factorization of the KKT matrix (by using qpOASES).
+A solver for Quadratic Programs with Linear Complementarity Constraints.
 
-The software is presented in two papers:
-* [the detailed description of the software](https://link.springer.com/article/10.1007/s12532-024-00272-w), and
-* [the original introduction of the algorithm](https://ieeexplore.ieee.org/abstract/document/9439931).
+This README gives the shortest path to building the C++ core and the Julia
+bindings. For the full documentation (MATLAB/Python interfaces, algorithm
+details, Docker, etc.) see [README.old.md](README.old.md).
 
+## Prerequisites
 
-## Requirements
-* Build process is currently only tested on Ubuntu >= 18.04
-* CMake version >= 3.13.0
-* This project depends on a few external repos. These are included and linked automatically:
-   * [qpOASES](https://github.com/coin-or/qpOASES)
-   * [OSQP](https://github.com/osqp/osqp)
-   * [googletest](https://github.com/google/googletest)
-   * [pybind11](https://github.com/pybind/pybind11)
+- A C++ compiler and **CMake >= 3.13**
+- **Julia >= 1.10** (only needed for the Julia bindings)
 
-## GETTING STARTED
-1. **Clone the repository**, and recursively initialize the submodules
+Install the `CxxWrap` Julia package once — CMake auto-detects its C++ library
+(`JlCxx`) from this:
 
-```
-$ git clone https://github.com/hallfjonas/LCQPow.git
-$ cd LCQPow
-$ git submodule update --init --recursive
-```
-
-2. **Configure and build** the project
-```
-$ mkdir build
-$ cd build
-$ cmake ..
-$ make
-```
-You may specify the following flags (bracket represents default):
-```
-BUILD TYPE         [Release] / Debug
-EXAMPLES           [ON] /  OFF
-MATLAB INTERFACE   [ON] /  OFF
-PYTHON INTERFACE   [ON] /  OFF
-DOCUMENTATION      [ON] /  OFF
-UNIT_TESTS         [ON] /  OFF
-PROFILING           ON  / [OFF]
-QPOASES_SCHUR       ON  / [OFF]
-```
-
-3. To test the build you can **run the examples** in the directory `<LCQPow-dir>/examples`.
-
-4. Even more examples, in particular variations of the options, can be found in `<LCQPow-dir>/test/examples` directory. Those are not included in the examples directory in order to keep the example set neatly arranged.
-
-## Docker Container
-
-To run executables inside a Linux Docker container, first build the container:
 ```bash
-docker build -t lcqpow:latest .
+julia -e 'using Pkg; Pkg.add("CxxWrap")'
 ```
 
-Then run a scipt, for exampe:
+## 1. Clone
+
+Clone the repo and pull in the bundled dependencies (qpOASES, OSQP, googletest,
+pybind11) as submodules:
+
 ```bash
-docker run --rm -it lcqpow:latest ./build/bin/examples/warm_up
+git clone https://github.com/micahreich/LCQPow.git
+cd LCQPow
+git submodule update --init --recursive
 ```
 
-Example usage:
+## 2. Build the C++ core + Julia bindings
+
+From the repository root:
+
 ```bash
-docker run --rm -it \
-  -v "$PWD/examples/example_data":/workspace/examples/example_data \
-  lcqpow:latest \
-  ./build/bin/examples/solve_lcqp_from_file examples/example_data
+cmake -S . -B build -DBUILD_JULIA_INTERFACE=ON
+cmake --build build -j4
 ```
 
-## MATLAB Interface
-The **MATLAB interface** is built automatically if matlab is successfully detected by CMake. Make sure that your **linker can locate the created libraries**, e.g. by exporting the library path in **the same shell as the one you call matlab in**:
-```
-$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<LCQPow-dir>/build/lib
-$ matlab
-```
-where `<LCQPow-dir>` represents the base directory of your local LCQPow repository.
+This builds the LCQPow library (and its qpOASES / OSQP dependencies) plus the
+`lcqpow_julia` bindings. The compiled bindings land at
+`build/lib/liblcqpow_julia.*`, which is where the Julia package looks by default.
 
-Whenever **using the MATLAB interface** make sure that **MATLAB is able to locate the interface** by executing
-```
-addpath("<LCQPow-dir>/build/lib")
-```
+> If you don't need Julia, just drop `-DBUILD_JULIA_INTERFACE=ON`. Examples and
+> unit tests build by default; add `-DBUILD_EXAMPLES=OFF -DUNIT_TESTS=OFF` to
+> skip them.
 
-Navigate your MATLAB editor to the directory `<LCQPow-dir>/interfaces/matlab/examples` and play with any of the provided codes.
+## 3. Set up the Julia package
 
-Type `help LCQPow` in order to obtain the documentation of our MATLAB interface.
+Instantiate the Julia project so it picks up its dependencies:
 
-## Python Interface
-Thanks to a contribution by [Sotaro Katayama](https://github.com/mayataka) you can call the solver through its python interface. Doing so can be en/disabled by setting the respective cmake flag. The python interface requires the **Python 3 development** package as well as **Eigen3**. Make sure these are installed. On Ubuntu this can be achieved by running
-```
-apt install libeigen3-dev
-apt-get install python3-dev
+```bash
+julia --project=interfaces/julia -e 'using Pkg; Pkg.instantiate()'
 ```
 
-Remark: unlike the matlab interface this is more in an experimental stage.
+## 4. Run it
 
-## Sparse vs Dense
-The most tested version of LCQPow uses qpOASES with dense linear algebra. There exist two alternatives:
-  - using OSQP, which exploits sparsity naturally,
-  - or using qpOASES Schur complement method (uses sparse linear solver MA57).
+```bash
+julia --project=interfaces/julia interfaces/julia/examples/simple_lcqp.jl
+```
 
-Usage of the qpOASES sparse method relies on some Matlab libraries (libmwma57.so, libmwlapack.so, libmwblas.so, libmwmetis.so), which are automatically detected and linked if they exist.
+Or from the REPL:
+
+```julia
+using Pkg; Pkg.activate("interfaces/julia")
+using LCQPow
+
+# minimize  1/2 x'x - [1,1]x   s.t.   0 <= x1  complements  x2 >= 0
+data = (
+    Q = [1.0 0.0; 0.0 1.0],
+    q = [-1.0, -1.0],
+    c0 = 0.0,
+    J_eq   = zeros(0, 2), b_eq   = zeros(0),
+    J_ineq = zeros(0, 2), b_ineq = zeros(0),
+    L = [1.0 0.0], l = [0.0],
+    R = [0.0 1.0], r = [0.0],
+)
+
+result = solve_qpcc_with_lcqpow(data)
+result.x           # [1.0, 0.0]  (or [0.0, 1.0])
+result.objective
+result.converged
+```
+
+See [interfaces/julia/README.md](interfaces/julia/README.md) for the full Julia
+API (problem form, options, QP-subsolver choice, warm starts).
 
 ## License
-The file LICENSE contains a copy of the GNU Lesser General Public License (v2.1). Please read it carefully before using LCQPow!
 
-## CONTACT THE AUTHORS
-If you have got questions, remarks or comments on LCQPow, it is strongly encouraged to report them by creating a new issue on this github page.
-
-Finally, you may contact the main author directly:
-        Jonas Hall,  hall.f.jonas@gmail.com
-
-Also bug reports, source code enhancements or success stories are most welcome!
-
-
-## Credits
-The design of this software project is in large parts inspired by that of [qpOASES](https://github.com/coin-or/qpOASES). This includes the object-oriented design, and the specific classes introduces (though each of the classes are quite different from qpOASES itself). Some code snippets may have more similarity to the code of qpOASES than others (in particular constructors and destructors may be very similar). Additionally, some files contain one-to-one code snippets copied from qpOASES (e.g., the matlab interface contains code that parses qpOASES options). In such files the copyright header is included explicitly.
-
-## Logo Design
-Thank you Johanna Schmidt for designing this logo!
+GNU Lesser General Public License (v2.1). See [LICENSE](LICENSE).
